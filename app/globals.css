@@ -1,0 +1,79 @@
+@import "tailwindcss";
+@import "react-phone-number-input/style.css";
+
+@theme {
+  --color-background: var(--bg);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-text: var(--text);
+  --color-border: var(--border);
+  --color-secondary: #3B82F6;
+  --color-danger: #EF4444;
+  --animate-shimmer: shimmer 2s linear infinite;
+
+  @keyframes shimmer {
+    0% { background-position: 200% center; }
+    100% { background-position: -200% center; }
+  }
+}
+
+:root {
+  --bg: #0F0F0F;
+  --card: #1A1A1A;
+  --primary: #22C55E;
+  --text: #FFFFFF;
+  --border: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='light'] {
+  --bg: #F5F5F5;
+  --card: #FFFFFF;
+  --primary: #22C55E;
+  --text: #1A1A1A;
+  --border: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme='female'] {
+  --bg: #FFF5F7;
+  --card: #FFFFFF;
+  --primary: #EC4899;
+  --text: #1A1A1A;
+  --border: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme='male'] {
+  --bg: #F0F9FF;
+  --card: #FFFFFF;
+  --primary: #3B82F6;
+  --text: #1A1A1A;
+  --border: rgba(0, 0, 0, 0.1);
+}
+
+@layer base {
+  body {
+    @apply bg-background text-text antialiased transition-colors duration-300;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+.card-shadow {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.phone-input-custom {
+  display: flex;
+  align-items: center;
+}
+
+.phone-input-custom .PhoneInputInput {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  outline: none;
+  width: 100%;
+  margin-left: 12px;
+}
+
+.phone-input-custom .PhoneInputCountry {
+  margin-right: 0;
+}
