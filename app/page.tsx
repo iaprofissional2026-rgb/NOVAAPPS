@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { User, Product } from '@/lib/types';
 import Image from 'next/image';
 import PhoneInput from 'react-phone-number-input';
-import { Search, Plus, User as UserIcon, MessageSquare, ArrowLeft, Send, Image as ImageIcon, Trash2, ShieldCheck, ShoppingBag, Check, Copy, Star, Package, Edit, Eye, ChevronRight, ChevronDown, CheckCircle, AlertCircle, Info, Heart, ShoppingCart, Flag, Shield, Lock, Moon, Sun, Sparkles, Zap, Palette, CreditCard } from 'lucide-react';
+import { Search, Plus, User as UserIcon, MessageSquare, ArrowLeft, Send, Image as ImageIcon, Trash2, ShieldCheck, ShoppingBag, Check, Copy, Star, Package, Edit, Eye, ChevronRight, ChevronDown, CheckCircle, AlertCircle, Info, Heart, ShoppingCart, Flag, Shield, Lock, Moon, Sun, Sparkles, Zap, Palette, CreditCard, Loader2 } from 'lucide-react';
 
 
 // --- Components ---
@@ -1275,6 +1275,10 @@ export default function App() {
   };
 
   const handleUpdatePlatformSettings = async (key: string, value: string) => {
+    if (!isSupabaseConfigured()) {
+      showToast('O Supabase não está configurado.', 'error');
+      return;
+    }
     setIsSavingSettings(true);
     try {
       const { error } = await supabase
@@ -1287,7 +1291,12 @@ export default function App() {
       showToast('Configuração atualizada com sucesso!', 'success');
     } catch (err) {
       console.error('Error updating settings:', err);
-      showToast('Erro ao atualizar configuração.', 'error');
+      const message = err instanceof Error ? err.message : 'Erro inesperado';
+      if (message.includes('Failed to fetch')) {
+        showToast('Erro de conexão com o Supabase.', 'error');
+      } else {
+        showToast('Erro ao atualizar configuração: ' + message, 'error');
+      }
     } finally {
       setIsSavingSettings(false);
     }
@@ -1421,6 +1430,11 @@ export default function App() {
       return;
     }
     
+    if (!isSupabaseConfigured()) {
+      showToast('O Supabase não está configurado. Configure as variáveis de ambiente.', 'error');
+      return;
+    }
+    
     setIsCreatingCoupon(true);
     try {
       const payload = { 
@@ -1503,6 +1517,12 @@ export default function App() {
     if (user.id.startsWith('demo-')) {
       setUser({ ...user, name: editName, whatsapp: editWhatsapp, pix_key: editPix, avatar_url: editAvatarUrl });
       setIsEditingProfile(false);
+      setIsSavingProfile(false);
+      return;
+    }
+
+    if (!isSupabaseConfigured()) {
+      showToast('O Supabase não está configurado.', 'error');
       setIsSavingProfile(false);
       return;
     }
@@ -1731,6 +1751,10 @@ export default function App() {
   };
 
   const handleUpdateSettings = async () => {
+    if (!isSupabaseConfigured()) {
+      showToast('O Supabase não está configurado. Configure as variáveis de ambiente no Vercel ou no AI Studio.', 'error');
+      return;
+    }
     setIsSavingSettings(true);
     try {
       const updates = [
@@ -1746,11 +1770,20 @@ export default function App() {
       if (!error) {
         showToast('Configurações salvas com sucesso!', 'success');
       } else {
-        showToast('Erro ao salvar configurações: ' + error.message, 'error');
+        if (error.message.includes('Failed to fetch')) {
+          showToast('Erro de conexão: Não foi possível alcançar o Supabase. Verifique sua conexão e a URL do Supabase.', 'error');
+        } else {
+          showToast('Erro ao salvar configurações: ' + error.message, 'error');
+        }
       }
     } catch (err) {
       console.error('Error updating settings:', err);
-      showToast('Erro inesperado ao salvar configurações.', 'error');
+      const message = err instanceof Error ? err.message : 'Erro inesperado';
+      if (message.includes('Failed to fetch')) {
+        showToast('Erro de conexão: Não foi possível alcançar o Supabase. Verifique se a URL está correta.', 'error');
+      } else {
+        showToast('Erro inesperado ao salvar configurações.', 'error');
+      }
     } finally {
       setIsSavingSettings(false);
     }
@@ -1758,6 +1791,10 @@ export default function App() {
 
   const handleUpdateUserAdmin = async () => {
     if (!editingUser) return;
+    if (!isSupabaseConfigured()) {
+      showToast('O Supabase não está configurado.', 'error');
+      return;
+    }
     try {
       const { error } = await supabase
         .from('users')
@@ -1779,9 +1816,18 @@ export default function App() {
           seller_role: editingUser.role
         } : p));
         setEditingUser(null);
+        showToast('Usuário atualizado com sucesso', 'success');
+      } else {
+        if (error.message.includes('Failed to fetch')) {
+          showToast('Erro de conexão com o Supabase.', 'error');
+        } else {
+          showToast('Erro ao atualizar usuário: ' + error.message, 'error');
+        }
+        console.error(error);
       }
     } catch (err) {
       console.error('Error updating user as admin:', err instanceof Error ? { message: err.message, stack: err.stack } : err);
+      showToast('Erro inesperado ao atualizar usuário', 'error');
     }
   };
 
@@ -2759,7 +2805,12 @@ export default function App() {
                   disabled={isPublishing}
                   className="w-full bg-primary text-white font-bold py-4 rounded-2xl shadow-xl shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  {isPublishing ? 'Salvando...' : 'Salvar Alterações'}
+                  {isPublishing ? (
+                    <>
+                      <Loader2 className="animate-spin" size={20} />
+                      Salvando...
+                    </>
+                  ) : 'Salvar Alterações'}
                 </button>
               </div>
             </div>
@@ -2880,9 +2931,14 @@ export default function App() {
               <button 
                 onClick={handlePublishProduct}
                 disabled={isPublishing || !newProductName || !newProductPrice}
-                className="w-full bg-primary disabled:opacity-50 text-white font-bold py-4 rounded-2xl shadow-lg shadow-primary/20"
+                className="w-full bg-primary disabled:opacity-50 text-white font-bold py-4 rounded-2xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
               >
-                {isPublishing ? 'Publicando...' : 'Publicar produto'}
+                {isPublishing ? (
+                  <>
+                    <Loader2 className="animate-spin" size={20} />
+                    Publicando...
+                  </>
+                ) : 'Publicar produto'}
               </button>
             </div>
           </motion.div>
